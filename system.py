@@ -35,7 +35,7 @@ st.set_page_config(
 
 GRID_MAX_CAPACITY = 8500.0
 
-st.title("⚡ Delhi AI-Based Short-Term Load Forecasting System")
+st.title("⚡ Delhi Power-Load Forecasting System")
 st.caption("State Load Despatch Centre (SLDC) - Predictive Grid Analytics Platform")
 
 # Sidebar controls
@@ -85,33 +85,34 @@ for ts in timestamps:
     month = ts.month
     is_weekend = 1 if dayofweek >= 5 else 0
 
-    # Simulate temperature
-    base_temp = 36.5 + temp_offset
+    # Use latest historical conditions as the starting point
+    latest = df.iloc[-1]
 
+    # Estimate future temperature from the latest observed temperature
     diurnal_variation = 4.5 * math.sin(
         2 * math.pi * (hour - 6) / 24
     )
 
     temp = (
-        base_temp
+        latest["temp_c"]
         + diurnal_variation
-        + random.uniform(-0.3, 0.3)
+        + temp_offset
     )
 
     max_temp = max(max_temp, temp)
 
-    # Simulate humidity
-    humidity = random.uniform(35, 70)
+    # Use latest historical humidity
+    humidity = latest["humidity"]
 
     # Calculate cooling and heating features
     cdd = max(0, temp - 22)
     hdd = max(0, 15 - temp)
 
-    # Simulate previous-hour temperature
-    temp_lag_1h = temp + random.uniform(-1.0, 1.0)
+    # Use historical temperature as previous-hour temperature
+    temp_lag_1h = latest["temp_c"]
 
-    # Simulate demand from 24 hours ago
-    demand_lag_24h = random.uniform(5000, 7000)
+    # Use actual historical demand from the dataset
+    demand_lag_24h = latest["actual_demand_mw"]
 
     # Prepare features for the ML model
     features = [[
@@ -129,6 +130,11 @@ for ts in timestamps:
 
     # Get AI prediction
     gross_demand = model.predict(features)[0]
+
+    #heatwave scenario
+    heatwave_factor = 1 + (temp_offset*0.02)
+
+    gross_demand = gross_demand * heatwave_factor
 
     # Calculate rooftop solar generation
     solar_generation = 0
@@ -154,7 +160,6 @@ for ts in timestamps:
         "temp": round(temp, 1),
         "demand": round(net_demand, 1)
     })
-
 # Display grid alerts
 if max_future_demand > GRID_MAX_CAPACITY:
 
