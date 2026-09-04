@@ -2,6 +2,9 @@ import streamlit as st
 import datetime
 import math
 import random
+import joblib
+
+model = joblib.load("model.pkl")
 
 # CONFIGURATION & PAGE SETUP
 st.set_page_config(page_title="Delhi SLDC Demand Forecast", layout="wide")
